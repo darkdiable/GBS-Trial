@@ -79,7 +79,9 @@ public class VideoDownloader {
 
     // 下载视频
     private static void downloadVideo(String videoUrl, String outputPath) throws Exception {
-       // todo 实现下载功能
+        // todo 实现下载功能
+
+        System.out.println("视频下载完成 -> " + outputPath);
     }
 
     // 去水印处理
