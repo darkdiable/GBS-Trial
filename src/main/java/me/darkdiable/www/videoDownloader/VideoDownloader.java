@@ -79,14 +79,50 @@ public class VideoDownloader {
 
     // 下载视频
     private static void downloadVideo(String videoUrl, String outputPath) throws Exception {
-        // todo 实现下载功能
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet(videoUrl);
+        httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+        httpGet.setHeader("Referer", "https://www.bilibili.com");
 
+        try (CloseableHttpResponse response = client.execute(httpGet)) {
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                try (InputStream inputStream = entity.getContent();
+                     FileOutputStream outputStream = new FileOutputStream(outputPath)) {
+                    ReadableByteChannel channel = Channels.newChannel(inputStream);
+                    outputStream.getChannel().transferFrom(channel, 0, Long.MAX_VALUE);
+                }
+            }
+        }
         System.out.println("视频下载完成 -> " + outputPath);
     }
 
     // 去水印处理
     private static void removeWatermark(String inputPath, String outputPath) throws Exception {
-        // todo 去水印处理
+        ProcessBuilder processBuilder = new ProcessBuilder(
+            "ffmpeg",
+            "-i", inputPath,
+            "-vf", "delogo=x=10:y=10:w=150:h=50:show=0",
+            "-c:a", "copy",
+            "-y",
+            outputPath
+        );
+        processBuilder.redirectErrorStream(true);
+        Process process = processBuilder.start();
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode == 0) {
+            System.out.println("去水印处理完成 -> " + outputPath);
+        } else {
+            throw new RuntimeException("ffmpeg去水印处理失败，退出码: " + exitCode);
+        }
     }
 }
 
