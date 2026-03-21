@@ -79,26 +79,7 @@ public class VideoDownloader {
 
     // 下载视频
     private static void downloadVideo(String videoUrl, String outputPath) throws Exception {
-        CloseableHttpClient client = HttpClients.createDefault();
-        HttpGet request = new HttpGet(videoUrl);
-
-        request.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-        request.setHeader("Referer", "https://www.bilibili.com");
-        request.setHeader("Origin", "https://www.bilibili.com");
-        request.setHeader("Accept", "*/*");
-        request.setHeader("Accept-Language", "zh-CN,zh;q=0.9");
-        request.setHeader("Sec-Fetch-Dest", "video");
-        request.setHeader("Sec-Fetch-Mode", "no-cors");
-        request.setHeader("Sec-Fetch-Site", "cross-site");
-
-        try (CloseableHttpResponse response = client.execute(request);
-             InputStream in = response.getEntity().getContent();
-             FileOutputStream fos = new FileOutputStream(outputPath)) {
-
-            ReadableByteChannel rbc = Channels.newChannel(in);
-            fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
-            System.out.println("视频下载完成 -> " + outputPath);
-        }
+       // todo 实现下载功能
     }
 
     // 去水印处理
