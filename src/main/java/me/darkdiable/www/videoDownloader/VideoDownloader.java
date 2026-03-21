@@ -86,43 +86,7 @@ public class VideoDownloader {
 
     // 去水印处理
     private static void removeWatermark(String inputPath, String outputPath) throws Exception {
-
-        // 构建FFmpeg命令
-        String[] cmd = {
-                "ffmpeg",
-                "-i", inputPath,
-                "-vf", "delogo=x=20:y=20:w=250:h=80",
-                "-c:a", "copy",  // 保持原音频流
-                "-y",            // 覆盖输出文件
-                outputPath
-        };
-        System.out.println("ffmpegCmd -> " + cmd);
-        ProcessBuilder builder = new ProcessBuilder(cmd);
-        builder.redirectErrorStream(true); // 合并标准错误和标准输出
-
-        Process process = builder.start();
-
-        // 异步读取输出（防止阻塞）
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<?> future = executor.submit(() -> {
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    System.out.println("[FFmpeg] " + line); // 实时输出日志
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-
-        int exitCode = process.waitFor();
-        future.get(); // 确保输出读取完成
-        executor.shutdown();
-
-        if (exitCode != 0) {
-            throw new RuntimeException("FFmpeg处理失败，退出码: " + exitCode);
-        }
+        // todo 去水印处理
     }
 }
 
