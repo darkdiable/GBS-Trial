@@ -15,7 +15,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,14 +81,96 @@ public class VideoDownloader {
 
     // 下载视频
     private static void downloadVideo(String videoUrl, String outputPath) throws Exception {
-        // todo 实现下载功能
+        System.out.println("开始下载视频: " + videoUrl);
+
+        CloseableHttpClient client = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet(videoUrl);
+        httpGet.setHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
+        httpGet.setHeader("Referer", "https://www.bilibili.com");
+
+        try (CloseableHttpResponse response = client.execute(httpGet)) {
+            HttpEntity entity = response.getEntity();
+            if (entity != null) {
+                long contentLength = entity.getContentLength();
+                System.out.println("视频大小: " + (contentLength > 0 ? contentLength / 1024 / 1024 + " MB" : "未知"));
+
+                try (InputStream inputStream = entity.getContent();
+                     FileOutputStream outputStream = new FileOutputStream(outputPath)) {
+
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+                    long totalBytesRead = 0;
+                    long startTime = System.currentTimeMillis();
+
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                        totalBytesRead += bytesRead;
+
+                        // 每10MB打印一次进度
+                        if (totalBytesRead % (10 * 1024 * 1024) < 8192) {
+                            System.out.println("已下载: " + totalBytesRead / 1024 / 1024 + " MB");
+                        }
+                    }
+
+                    long duration = System.currentTimeMillis() - startTime;
+                    System.out.println("下载完成，耗时: " + duration / 1000 + " 秒");
+                }
+            }
+        }
 
         System.out.println("视频下载完成 -> " + outputPath);
     }
 
     // 去水印处理
     private static void removeWatermark(String inputPath, String outputPath) throws Exception {
-        // todo 去水印处理
+        System.out.println("开始去水印处理...");
+
+        // 使用ffmpeg进行去水印处理
+        // 策略：通过delogo滤镜去除视频角落的水印区域
+        // delogo滤镜参数：x,y为起始坐标，w,h为宽度和高度
+
+        // 构建ffmpeg命令参数列表
+        List<String> command = new ArrayList<>();
+        command.add("ffmpeg");
+        command.add("-i");
+        command.add(inputPath);
+        command.add("-vf");
+        // 去除左上角和右上角的水印区域
+        // 对于1280x720的视频，右上角水印位置约在 x=1120 (1280-160)
+        command.add("delogo=x=10:y=10:w=150:h=60:show=0,delogo=x=1120:y=10:w=150:h=60:show=0");
+        command.add("-c:v");
+        command.add("libx264");
+        command.add("-crf");
+        command.add("23");
+        command.add("-preset");
+        command.add("fast");
+        command.add("-c:a");
+        command.add("copy");
+        command.add("-y");
+        command.add(outputPath);
+
+        System.out.println("执行命令: " + String.join(" ", command));
+
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        // 读取ffmpeg输出
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("frame=") || line.contains("size=")) {
+                    System.out.println("ffmpeg: " + line);
+                }
+            }
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("去水印处理失败，ffmpeg退出码: " + exitCode);
+        }
+
+        System.out.println("去水印处理完成 -> " + outputPath);
     }
 }
 
